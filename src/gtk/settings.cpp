@@ -574,6 +574,56 @@ int wxSystemSettingsNative::GetMetric( wxSystemMetric index, wxWindow* win )
                             "gtk-double-click-time", &dclick, NULL);
             return dclick;
 
+        case wxSYS_CARET_ON_MSEC:
+            {
+                gint blink_time = -1;
+                g_object_get(GetSettingsForWindowScreen(window),
+                                "gtk-cursor-blink-time", &blink_time, NULL);
+                if (blink_time > 0)
+                    return blink_time / 2;
+
+                return -1;
+            }
+
+        case wxSYS_CARET_OFF_MSEC:
+            {
+                gboolean should_blink = true;
+                gint blink_time = -1;
+                g_object_get(GetSettingsForWindowScreen(window),
+                                "gtk-cursor-blink", &should_blink,
+                                "gtk-cursor-blink-time", &blink_time,
+                                NULL);
+                if (!should_blink)
+                    return 0;
+
+                if (blink_time > 0)
+                    return blink_time / 2;
+
+                return -1;
+            }
+
+        case wxSYS_CARET_TIMEOUT_MSEC:
+            {
+                gboolean should_blink = true;
+                gint timeout = 0;
+                g_object_get(GetSettingsForWindowScreen(window),
+                                "gtk-cursor-blink", &should_blink,
+                                "gtk-cursor-blink-timeout", &timeout,
+                                NULL);
+                if (!should_blink)
+                    return 0;
+
+                // GTK+ returns this value in seconds, not milliseconds,
+                // Special value of 2147483647 means that the cursor never
+                // blinks and we handle any value that would overflow int after
+                // multiplication in the same manner as it looks quite
+                // unnecessary to support cursor blinking once a month.
+                if (timeout > 0 && timeout < 2147483647 / 1000)
+                    return timeout * 1000;
+
+                return -1;  // no timeout, blink forever
+            }
+
         case wxSYS_DRAG_X:
         case wxSYS_DRAG_Y:
             gint drag_threshold;

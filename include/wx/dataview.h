@@ -29,6 +29,8 @@
 #include "wx/systhemectrl.h"
 
 class WXDLLIMPEXP_FWD_CORE wxImageList;
+class wxItemAttr;
+class WXDLLIMPEXP_FWD_CORE wxHeaderCtrl;
 
 #if !(defined(__WXGTK20__) || defined(__WXOSX__) ) || defined(__WXUNIVERSAL__)
 // #if !(defined(__WXOSX__)) || defined(__WXUNIVERSAL__)
@@ -52,6 +54,9 @@ class WXDLLIMPEXP_FWD_ADV wxDataViewCtrl;
 class WXDLLIMPEXP_FWD_ADV wxDataViewColumn;
 class WXDLLIMPEXP_FWD_ADV wxDataViewRenderer;
 class WXDLLIMPEXP_FWD_ADV wxDataViewModelNotifier;
+#if wxUSE_ACCESSIBILITY
+class WXDLLIMPEXP_FWD_ADV wxDataViewCtrlAccessible;
+#endif // wxUSE_ACCESSIBILITY
 
 extern WXDLLIMPEXP_DATA_ADV(const char) wxDataViewCtrlNameStr[];
 
@@ -85,7 +90,7 @@ class wxDataViewItem : public wxItemId<void*>
 {
 public:
     wxDataViewItem() : wxItemId<void*>() { }
-    wxEXPLICIT wxDataViewItem(void* pItem) : wxItemId<void*>(pItem) { }
+    explicit wxDataViewItem(void* pItem) : wxItemId<void*>(pItem) { }
 };
 
 WX_DEFINE_ARRAY(wxDataViewItem, wxDataViewItemArray);
@@ -128,7 +133,7 @@ private:
 // wxDataViewItemAttr: a structure containing the visual attributes of an item
 // ----------------------------------------------------------------------------
 
-// TODO: this should be renamed to wxItemAttr or something general like this
+// TODO: Merge with wxItemAttr somehow.
 
 class WXDLLIMPEXP_ADV wxDataViewItemAttr
 {
@@ -380,7 +385,7 @@ public:
     // implement base methods
     virtual unsigned int GetChildren( const wxDataViewItem &item, wxDataViewItemArray &children ) const wxOVERRIDE;
 
-    unsigned int GetCount() const wxOVERRIDE { return m_hash.GetCount(); }
+    unsigned int GetCount() const wxOVERRIDE { return (unsigned int)m_hash.GetCount(); }
 
 private:
     wxDataViewItemArray m_hash;
@@ -731,6 +736,10 @@ public:
 
     // define control visual attributes
     // --------------------------------
+
+    // Header attributes: only implemented in the generic version currently.
+    virtual bool SetHeaderAttr(const wxItemAttr& WXUNUSED(attr))
+        { return false; }
 
     virtual wxVisualAttributes GetDefaultAttributes() const wxOVERRIDE
     {
@@ -1295,9 +1304,17 @@ public:
 
 //-----------------------------------------------------------------------------
 
+#if wxUSE_ACCESSIBILITY
+class WXDLLIMPEXP_FWD_ADV wxDataViewTreeCtrlAccessible;
+#endif // wxUSE_ACCESSIBILITY
+
 class WXDLLIMPEXP_ADV wxDataViewTreeCtrl: public wxDataViewCtrl,
                                           public wxWithImages
 {
+#if wxUSE_ACCESSIBILITY
+    friend class wxDataViewTreeCtrlAccessible;
+#endif // wxUSE_ACCESSIBILITY
+
 public:
     wxDataViewTreeCtrl() { }
     wxDataViewTreeCtrl(wxWindow *parent,
@@ -1369,6 +1386,10 @@ public:
     void OnCollapsed( wxDataViewEvent &event );
     void OnSize( wxSizeEvent &event );
 
+#if wxUSE_ACCESSIBILITY
+    virtual wxAccessible* CreateAccessible() wxOVERRIDE;
+#endif // wxUSE_ACCESSIBILITY
+
 private:
     wxDECLARE_EVENT_TABLE();
     wxDECLARE_DYNAMIC_CLASS_NO_ASSIGN(wxDataViewTreeCtrl);
@@ -1394,6 +1415,21 @@ private:
 #define wxEVT_COMMAND_DATAVIEW_ITEM_BEGIN_DRAG             wxEVT_DATAVIEW_ITEM_BEGIN_DRAG
 #define wxEVT_COMMAND_DATAVIEW_ITEM_DROP_POSSIBLE          wxEVT_DATAVIEW_ITEM_DROP_POSSIBLE
 #define wxEVT_COMMAND_DATAVIEW_ITEM_DROP                   wxEVT_DATAVIEW_ITEM_DROP
+
+#if wxUSE_ACCESSIBILITY
+//-----------------------------------------------------------------------------
+// wxDataViewTreeCtrlAccessible
+//-----------------------------------------------------------------------------
+
+class WXDLLIMPEXP_ADV wxDataViewTreeCtrlAccessible: public wxDataViewCtrlAccessible
+{
+public:
+    wxDataViewTreeCtrlAccessible(wxDataViewTreeCtrl* win);
+    virtual ~wxDataViewTreeCtrlAccessible() {};
+
+    virtual wxAccStatus GetName(int childId, wxString* name) wxOVERRIDE;
+};
+#endif // wxUSE_ACCESSIBILITY
 
 #endif // wxUSE_DATAVIEWCTRL
 

@@ -306,6 +306,18 @@ void wxStackWalker::WalkFromException(size_t maxDepth)
 
 #endif // wxUSE_ON_FATAL_EXCEPTION
 
+#ifdef __VISUALC__
+    #pragma warning(push)
+
+    // "warning C4740: flow in or out of inline asm code suppresses global
+    //  optimization"
+    #pragma warning(disable: 4740)
+
+    // "warning C4748: /GS can not protect parameters and local variables from
+    //  local buffer overrun because optimizations are disabled in function"
+    #pragma warning(disable: 4748)
+#endif
+
 void wxStackWalker::Walk(size_t skip, size_t maxDepth)
 {
     // This code is based on frames.cpp from Edd Dawson's dbg library
@@ -331,7 +343,7 @@ void wxStackWalker::Walk(size_t skip, size_t maxDepth)
         ctx.Eip = regEip;
         ctx.Esp = regEsp;
         ctx.Ebp = regEbp;
-    #elif __VISUALC__
+    #elif defined(__VISUALC__)
         __asm
         {
         Here:
@@ -347,6 +359,10 @@ void wxStackWalker::Walk(size_t skip, size_t maxDepth)
 
     WalkFrom(&ctx, skip, maxDepth);
 }
+
+#ifdef __VISUALC__
+    #pragma warning(pop)
+#endif
 
 #endif // wxUSE_STACKWALKER
 

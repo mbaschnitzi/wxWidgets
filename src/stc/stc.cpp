@@ -136,6 +136,7 @@ wxDEFINE_EVENT( wxEVT_STC_AUTOCOMP_CHAR_DELETED, wxStyledTextEvent );
 wxDEFINE_EVENT( wxEVT_STC_HOTSPOT_RELEASE_CLICK, wxStyledTextEvent );
 wxDEFINE_EVENT( wxEVT_STC_CLIPBOARD_COPY, wxStyledTextEvent );
 wxDEFINE_EVENT( wxEVT_STC_CLIPBOARD_PASTE, wxStyledTextEvent );
+wxDEFINE_EVENT( wxEVT_STC_AUTOCOMP_COMPLETED, wxStyledTextEvent );
 
 
 
@@ -4646,7 +4647,7 @@ wxFont wxStyledTextCtrl::StyleGetFont(int style) {
 
 // Set style size, face, bold, italic, and underline attributes from
 // a wxFont's attributes.
-void wxStyledTextCtrl::StyleSetFont(int styleNum, wxFont& font) {
+void wxStyledTextCtrl::StyleSetFont(int styleNum, const wxFont& font) {
 #ifdef __WXGTK__
     // Ensure that the native font is initialized
     int x, y;
@@ -5009,6 +5010,17 @@ wxCharBuffer wxStyledTextCtrl::GetSelectedTextRaw()
     return buf;
 }
 
+wxCharBuffer wxStyledTextCtrl::GetTargetTextRaw()
+{
+    // Calculate the length needed first.
+    const int len = SendMsg(SCI_GETTARGETEND, 0, 0) - SendMsg(SCI_GETTARGETSTART, 0, 0);
+
+    // And then really get the data.
+    wxCharBuffer buf(len);
+    SendMsg(SCI_GETTARGETTEXT, 0, (sptr_t)buf.data());
+    return buf;
+}
+
 wxCharBuffer wxStyledTextCtrl::GetTextRangeRaw(int startPos, int endPos)
 {
     if (endPos < startPos) {
@@ -5027,6 +5039,7 @@ wxCharBuffer wxStyledTextCtrl::GetTextRangeRaw(int startPos, int endPos)
     tr.lpstrText = buf.data();
     tr.chrg.cpMin = startPos;
     tr.chrg.cpMax = endPos;
+    tr.lpstrText[0] = '\0'; // initialize with 0 in case the range is invalid
     SendMsg(SCI_GETTEXTRANGE, 0, (sptr_t)&tr);
     return buf;
 }
@@ -5190,7 +5203,7 @@ void wxStyledTextCtrl::OnChar(wxKeyEvent& evt) {
         }
 #else
         int key = evt.GetKeyCode();
-        if (key <= WXK_START || key > WXK_COMMAND) {
+        if (key < WXK_START) {
             m_swx->DoAddChar(key);
             return;
         }
@@ -5351,18 +5364,12 @@ void wxStyledTextCtrl::NotifyParent(SCNotification* _scn) {
         evt.SetEventType(wxEVT_STC_PAINTED);
         break;
 
-    case SCN_AUTOCSELECTION:
-        evt.SetEventType(wxEVT_STC_AUTOCOMP_SELECTION);
-        evt.SetListType(scn.listType);
-        SetEventText(evt, scn.text, strlen(scn.text));
-        evt.SetPosition(scn.lParam);
-        break;
-
     case SCN_USERLISTSELECTION:
         evt.SetEventType(wxEVT_STC_USERLISTSELECTION);
         evt.SetListType(scn.listType);
         SetEventText(evt, scn.text, strlen(scn.text));
         evt.SetPosition(scn.lParam);
+        evt.SetListCompletionMethod(scn.listCompletionMethod);
         break;
 
     case SCN_URIDROPPED:
@@ -5394,8 +5401,8 @@ void wxStyledTextCtrl::NotifyParent(SCNotification* _scn) {
         evt.SetEventType(wxEVT_STC_HOTSPOT_DCLICK);
         break;
 
-    case SCN_CALLTIPCLICK:
-        evt.SetEventType(wxEVT_STC_CALLTIP_CLICK);
+    case SCN_HOTSPOTRELEASECLICK:
+        evt.SetEventType(wxEVT_STC_HOTSPOT_RELEASE_CLICK);
         break;
 
     case SCN_INDICATORCLICK:
@@ -5406,6 +5413,18 @@ void wxStyledTextCtrl::NotifyParent(SCNotification* _scn) {
         evt.SetEventType(wxEVT_STC_INDICATOR_RELEASE);
         break;
 
+    case SCN_CALLTIPCLICK:
+        evt.SetEventType(wxEVT_STC_CALLTIP_CLICK);
+        break;
+
+    case SCN_AUTOCSELECTION:
+        evt.SetEventType(wxEVT_STC_AUTOCOMP_SELECTION);
+        evt.SetListType(scn.listType);
+        SetEventText(evt, scn.text, strlen(scn.text));
+        evt.SetPosition(scn.lParam);
+        evt.SetListCompletionMethod(scn.listCompletionMethod);
+        break;
+
     case SCN_AUTOCCANCELLED:
         evt.SetEventType(wxEVT_STC_AUTOCOMP_CANCELLED);
         break;
@@ -5414,8 +5433,12 @@ void wxStyledTextCtrl::NotifyParent(SCNotification* _scn) {
         evt.SetEventType(wxEVT_STC_AUTOCOMP_CHAR_DELETED);
         break;
 
-    case SCN_HOTSPOTRELEASECLICK:
-        evt.SetEventType(wxEVT_STC_HOTSPOT_RELEASE_CLICK);
+    case SCN_AUTOCCOMPLETED:
+        evt.SetEventType(wxEVT_STC_AUTOCOMP_COMPLETED);
+        evt.SetListType(scn.listType);
+        SetEventText(evt, scn.text, strlen(scn.text));
+        evt.SetPosition(scn.lParam);
+        evt.SetListCompletionMethod(scn.listCompletionMethod);
         break;
 
     default:
@@ -5452,6 +5475,7 @@ wxStyledTextEvent::wxStyledTextEvent(wxEventType commandType, int id)
     m_token = 0;
     m_annotationLinesAdded = 0;
     m_updated = 0;
+    m_listCompletionMethod = 0;
 
 #if wxUSE_DRAG_AND_DROP
     m_dragFlags = wxDrag_CopyOnly;
@@ -5490,6 +5514,7 @@ wxStyledTextEvent::wxStyledTextEvent(const wxStyledTextEvent& event):
     m_token =        event.m_token;
     m_annotationLinesAdded = event.m_annotationLinesAdded;
     m_updated =      event.m_updated;
+    m_listCompletionMethod = event.m_listCompletionMethod;
 
 #if wxUSE_DRAG_AND_DROP
     m_dragFlags =    event.m_dragFlags;
@@ -5502,7 +5527,7 @@ wxStyledTextEvent::wxStyledTextEvent(const wxStyledTextEvent& event):
 
 /*static*/ wxVersionInfo wxStyledTextCtrl::GetLibraryVersionInfo()
 {
-    return wxVersionInfo("Scintilla", 3, 6, 3, "Scintilla 3.6.3");
+    return wxVersionInfo("Scintilla", 3, 6, 6, "Scintilla 3.6.6");
 }
 
 #endif // wxUSE_STC

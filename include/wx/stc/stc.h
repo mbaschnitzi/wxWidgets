@@ -560,6 +560,7 @@ class WXDLLIMPEXP_FWD_CORE wxScrollBar;
 #define wxSTC_LEX_SREC 117
 #define wxSTC_LEX_IHEX 118
 #define wxSTC_LEX_TEHEX 119
+#define wxSTC_LEX_JSON 120
 
 /// When a lexer specifies its language as SCLEX_AUTOMATIC it receives a
 /// value assigned in sequence from SCLEX_AUTOMATIC+1.
@@ -2431,6 +2432,24 @@ class WXDLLIMPEXP_FWD_CORE wxScrollBar;
 #define wxSTC_HEX_CHECKSUM 16
 #define wxSTC_HEX_CHECKSUM_WRONG 17
 #define wxSTC_HEX_GARBAGE 18
+
+/// Lexical state for SCLEX_IHEX (shared with Srec)
+/// Lexical state for SCLEX_TEHEX (shared with Srec)
+/// Lexical states for SCLEX_JSON
+#define wxSTC_JSON_DEFAULT 0
+#define wxSTC_JSON_NUMBER 1
+#define wxSTC_JSON_STRING 2
+#define wxSTC_JSON_STRINGEOL 3
+#define wxSTC_JSON_PROPERTYNAME 4
+#define wxSTC_JSON_ESCAPESEQUENCE 5
+#define wxSTC_JSON_LINECOMMENT 6
+#define wxSTC_JSON_BLOCKCOMMENT 7
+#define wxSTC_JSON_OPERATOR 8
+#define wxSTC_JSON_URI 9
+#define wxSTC_JSON_COMPACTIRI 10
+#define wxSTC_JSON_KEYWORD 11
+#define wxSTC_JSON_LDKEYWORD 12
+#define wxSTC_JSON_ERROR 13
 
 //}}}
 //----------------------------------------------------------------------
@@ -4880,7 +4899,7 @@ public:
 
     // Set style size, face, bold, italic, and underline attributes from
     // a wxFont's attributes.
-    void StyleSetFont(int styleNum, wxFont& font);
+    void StyleSetFont(int styleNum, const wxFont& font);
 
 
 
@@ -5000,6 +5019,9 @@ public:
 
     // Retrieve the selected text.
     wxCharBuffer GetSelectedTextRaw();
+
+    // Retrieve the target text.
+    wxCharBuffer GetTargetTextRaw();
 
     // Retrieve a range of text.
     wxCharBuffer GetTextRangeRaw(int startPos, int endPos);
@@ -5280,6 +5302,7 @@ public:
     void SetToken(int val)                { m_token = val; }
     void SetAnnotationLinesAdded(int val) { m_annotationLinesAdded = val; }
     void SetUpdated(int val)              { m_updated = val; }
+    void SetListCompletionMethod(int val) { m_listCompletionMethod = val; }
 #ifdef  STC_USE_DND
     // Kept for backwards compatibility, use SetString().
     void SetDragText(const wxString& val) { SetString(val); }
@@ -5318,6 +5341,7 @@ public:
     int  GetToken() const                 { return m_token; }
     int  GetAnnotationsLinesAdded() const { return m_annotationLinesAdded; }
     int  GetUpdated() const               { return m_updated; }
+    int  GetListCompletionMethod() const  { return m_listCompletionMethod; }
     
 #ifdef STC_USE_DND
     // Kept for backwards compatibility, use GetString().
@@ -5332,7 +5356,7 @@ public:
     bool GetControl() const;
     bool GetAlt() const;
 
-    virtual wxEvent* Clone() const { return new wxStyledTextEvent(*this); }
+    virtual wxEvent* Clone() const wxOVERRIDE { return new wxStyledTextEvent(*this); }
 
 #ifndef SWIG
 private:
@@ -5362,6 +5386,7 @@ private:
     int m_token;                // wxEVT_STC__MODIFIED with SC_MOD_CONTAINER 
     int m_annotationLinesAdded; // wxEVT_STC_MODIFIED with SC_MOD_CHANGEANNOTATION 
     int m_updated;              // wxEVT_STC_UPDATEUI
+    int m_listCompletionMethod;
 
 #if wxUSE_DRAG_AND_DROP
     int      m_dragFlags;       // wxEVT_STC_START_DRAG
@@ -5406,6 +5431,7 @@ wxDECLARE_EXPORTED_EVENT( WXDLLIMPEXP_STC, wxEVT_STC_AUTOCOMP_CHAR_DELETED, wxSt
 wxDECLARE_EXPORTED_EVENT( WXDLLIMPEXP_STC, wxEVT_STC_HOTSPOT_RELEASE_CLICK, wxStyledTextEvent );
 wxDECLARE_EXPORTED_EVENT( WXDLLIMPEXP_STC, wxEVT_STC_CLIPBOARD_COPY, wxStyledTextEvent );
 wxDECLARE_EXPORTED_EVENT( WXDLLIMPEXP_STC, wxEVT_STC_CLIPBOARD_PASTE, wxStyledTextEvent );
+wxDECLARE_EXPORTED_EVENT( WXDLLIMPEXP_STC, wxEVT_STC_AUTOCOMP_COMPLETED, wxStyledTextEvent );
 #else
     enum {
         wxEVT_STC_CHANGE,
@@ -5440,7 +5466,8 @@ wxDECLARE_EXPORTED_EVENT( WXDLLIMPEXP_STC, wxEVT_STC_CLIPBOARD_PASTE, wxStyledTe
         wxEVT_STC_AUTOCOMP_CHAR_DELETED,
         wxEVT_STC_HOTSPOT_RELEASE_CLICK,
         wxEVT_STC_CLIPBOARD_COPY,
-        wxEVT_STC_CLIPBOARD_PASTE
+        wxEVT_STC_CLIPBOARD_PASTE,
+        wxEVT_STC_AUTOCOMP_COMPLETED
     };
 #endif
 
@@ -5485,6 +5512,7 @@ typedef void (wxEvtHandler::*wxStyledTextEventFunction)(wxStyledTextEvent&);
 #define EVT_STC_HOTSPOT_RELEASE_CLICK(id, fn) wxDECLARE_EVENT_TABLE_ENTRY( wxEVT_STC_HOTSPOT_RELEASE_CLICK, id, wxID_ANY, wxStyledTextEventHandler( fn ), (wxObject *) NULL ),
 #define EVT_STC_CLIPBOARD_COPY(id, fn)        wxDECLARE_EVENT_TABLE_ENTRY( wxEVT_STC_CLIPBOARD_COPY,        id, wxID_ANY, wxStyledTextEventHandler( fn ), (wxObject *) NULL ),
 #define EVT_STC_CLIPBOARD_PASTE(id, fn)       wxDECLARE_EVENT_TABLE_ENTRY( wxEVT_STC_CLIPBOARD_PASTE,       id, wxID_ANY, wxStyledTextEventHandler( fn ), (wxObject *) NULL ),
+#define EVT_STC_AUTOCOMP_COMPLETED(id, fn)    wxDECLARE_EVENT_TABLE_ENTRY( wxEVT_STC_AUTOCOMP_COMPLETED,    id, wxID_ANY, wxStyledTextEventHandler( fn ), (wxObject *) NULL ),
 
 #endif
 

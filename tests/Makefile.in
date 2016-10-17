@@ -182,6 +182,8 @@ TEST_GUI_OBJECTS =  \
 	test_gui_measuring.o \
 	test_gui_affinematrix.o \
 	test_gui_boundingbox.o \
+	test_gui_clippingbox.o \
+	test_gui_graphmatrix.o \
 	test_gui_config.o \
 	test_gui_bitmapcomboboxtest.o \
 	test_gui_bitmaptogglebuttontest.o \
@@ -391,7 +393,7 @@ COND_wxUSE_REGEX_builtin___LIB_REGEX_p = \
 
 ### Targets: ###
 
-all: test$(EXEEXT) $(__test_drawing___depname) $(__test_drawingplugin___depname) $(__test_gui___depname) $(__test_gui_bundle___depname) data data-images fr
+all: test$(EXEEXT) $(__test_drawing___depname) $(__test_drawingplugin___depname) $(__test_gui___depname) $(__test_gui_bundle___depname) data data-images fr ja
 
 install: 
 
@@ -493,6 +495,18 @@ fr:
 	fi; \
 	case "$$x" in ?*) \
 	cp -pRf $(srcdir)/intl/fr/$$f ./intl/fr ;; \
+	esac; \
+	done
+
+ja: 
+	@mkdir -p ./intl/ja
+	@for f in internat.po internat.mo; do \
+	if test ! -f ./intl/ja/$$f -a ! -d ./intl/ja/$$f ; \
+	then x=yep ; \
+	else x=`find $(srcdir)/intl/ja/$$f -newer ./intl/ja/$$f -print` ; \
+	fi; \
+	case "$$x" in ?*) \
+	cp -pRf $(srcdir)/intl/ja/$$f ./intl/ja ;; \
 	esac; \
 	done
 
@@ -808,6 +822,12 @@ test_gui_affinematrix.o: $(srcdir)/graphics/affinematrix.cpp $(TEST_GUI_ODEP)
 test_gui_boundingbox.o: $(srcdir)/graphics/boundingbox.cpp $(TEST_GUI_ODEP)
 	$(CXXC) -c -o $@ $(TEST_GUI_CXXFLAGS) $(srcdir)/graphics/boundingbox.cpp
 
+test_gui_clippingbox.o: $(srcdir)/graphics/clippingbox.cpp $(TEST_GUI_ODEP)
+	$(CXXC) -c -o $@ $(TEST_GUI_CXXFLAGS) $(srcdir)/graphics/clippingbox.cpp
+
+test_gui_graphmatrix.o: $(srcdir)/graphics/graphmatrix.cpp $(TEST_GUI_ODEP)
+	$(CXXC) -c -o $@ $(TEST_GUI_CXXFLAGS) $(srcdir)/graphics/graphmatrix.cpp
+
 test_gui_config.o: $(srcdir)/config/config.cpp $(TEST_GUI_ODEP)
 	$(CXXC) -c -o $@ $(TEST_GUI_CXXFLAGS) $(srcdir)/config/config.cpp
 
@@ -1075,4 +1095,4 @@ failtest_weakref:
 # Include dependency info, if present:
 @IF_GNU_MAKE@-include ./.deps/*.d
 
-.PHONY: all install uninstall clean distclean test_gui_bundle data data-images fr
+.PHONY: all install uninstall clean distclean test_gui_bundle data data-images fr ja

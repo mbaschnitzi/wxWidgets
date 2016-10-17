@@ -620,8 +620,6 @@ wxNSTextViewControl::wxNSTextViewControl( wxTextCtrl *wxPeer, WXWidget w, long s
     [tv setVerticallyResizable:YES];
     [tv setHorizontallyResizable:hasHScroll];
     [tv setAutoresizingMask:NSViewWidthSizable];
-    [tv setAutomaticDashSubstitutionEnabled:false];
-    [tv setAutomaticQuoteSubstitutionEnabled:false];
     
     if ( hasHScroll )
     {
@@ -863,6 +861,18 @@ void wxNSTextViewControl::CheckSpelling(bool check)
 {
     if (m_textView)
         [m_textView setContinuousSpellCheckingEnabled: check];
+}
+
+void wxNSTextViewControl::EnableAutomaticQuoteSubstitution(bool enable)
+{
+    if (m_textView)
+        [m_textView setAutomaticQuoteSubstitutionEnabled:enable];
+}
+
+void wxNSTextViewControl::EnableAutomaticDashSubstitution(bool enable)
+{
+    if (m_textView)
+        [m_textView setAutomaticDashSubstitutionEnabled:enable];
 }
 
 wxSize wxNSTextViewControl::GetBestSize() const

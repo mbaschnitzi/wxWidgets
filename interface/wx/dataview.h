@@ -1395,11 +1395,8 @@ public:
     int GetIndent() const;
 
     /**
-        Returns item rectangle.
-
-        This method is currently not implemented at all in wxGTK and only
-        implemented for non-@NULL @a col argument in wxOSX. It is fully
-        implemented in the generic version of the control.
+        Returns item rectangle. Coordinates of the rectangle are specified in
+        wxDataViewCtrl client area coordinates.
 
         @param item
             A valid item.
@@ -1407,6 +1404,10 @@ public:
             If non-@NULL, the rectangle returned corresponds to the
             intersection of the item with the specified column. If @NULL, the
             rectangle spans all the columns.
+
+        @note This method is currently not implemented at all in wxGTK and only
+              implemented for non-@NULL @a col argument in wxOSX. It is fully
+              implemented in the generic version of the control.
     */
     virtual wxRect GetItemRect(const wxDataViewItem& item,
                                const wxDataViewColumn* col = NULL) const;
@@ -1485,7 +1486,9 @@ public:
     bool HasSelection() const;
 
     /**
-        Hittest.
+        Retrieves item and column at the given point.
+        The point coordinates are specified in wxDataViewCtrl client area
+        coordinates.
     */
     virtual void HitTest(const wxPoint& point, wxDataViewItem& item,
                          wxDataViewColumn*& col) const;
@@ -1548,6 +1551,25 @@ public:
     void SetCurrentItem(const wxDataViewItem& item);
 
     /**
+        Set custom colours and/or font to use for the header.
+
+        This method allows to customize the display of the control header (it
+        does nothing if @c wxDV_NO_HEADER style is used).
+
+        Currently it is only implemented in the generic version and just
+        returns @false without doing anything elsewhere.
+
+        @param attr The attribute defining the colour(s) and font to use. It
+            can be default, in which case the attributes are reset to their
+            default values.
+        @return @true if the attributes were updated, @false if the method is
+            not implemented or failed.
+
+        @since 3.1.1
+    */
+    bool SetHeaderAttr(const wxItemAttr& attr);
+
+    /**
         Sets the indentation.
     */
     void SetIndent(int indent);
@@ -1574,8 +1596,8 @@ public:
         This function can only be used when all rows have the same height, i.e.
         when wxDV_VARIABLE_LINE_HEIGHT flag is not used.
 
-        Currently this is implemented in the generic and native GTK versions
-        only and nothing is done (and @false returned) when using OS X port.
+        Currently this is implemented in the generic and native GTK and OS X
+        (since 3.1.1) versions.
 
         Also notice that this method can only be used to increase the row
         height compared with the default one (as determined by the return value
@@ -1947,6 +1969,49 @@ public:
     wxDataViewTextRenderer(const wxString& varianttype = GetDefaultType(),
                            wxDataViewCellMode mode = wxDATAVIEW_CELL_INERT,
                            int align = wxDVR_DEFAULT_ALIGNMENT );
+
+    /**
+        Enable interpretation of markup in the item data.
+
+        If this method is called with @true argument, markup (@ref
+        wxControl::SetLabelMarkup()) in the data of the items in this column
+        will be interpreted, which can be used for a more fine-grained
+        appearance control than just setting an attribute, which affects all of
+        the item text.
+
+        For example, as shown in the @ref page_samples_dataview, after creating
+        a column using a markup-enabled renderer:
+        @code
+            wxDataViewTextRenderer* renderer = new wxDataViewTextRenderer();
+            renderer->EnableMarkup();
+            dataViewCtrl->AppendColumn(new wxDataViewColumn("title", renderer, 0));
+        @endcode
+
+        The overridden model wxDataViewModel::GetValue() method may return
+        values containing markup for this column:
+        @code
+        void MyModel::GetValue(wxVariant& variant,
+                               const wxDataViewItem& item,
+                               unsigned int col) const
+        {
+            if ( col == 0 && item == ... )
+            {
+                variant = "<span color=\"#87ceeb\">light</span> and "
+                          "<span color=\"#000080\">dark</span> blue";
+            }
+
+            ...
+        }
+        @endcode
+
+        @note Currently wxDataViewIconTextRenderer only provides EnableMarkup()
+            EnableMarkup() in wxGTK, but not under the other platforms, so you
+            should only use it for plain wxDataViewTextRenderer columns,
+            without icons, in portable code.
+
+        @since 3.1.1
+     */
+    void EnableMarkup(bool enable = true);
 };
 
 
@@ -2336,8 +2401,7 @@ public:
                           const wxDataViewItem & item,
                           unsigned int col);
 
-
-    /**
+/**
         Override this to render the cell.
         Before this is called, wxDataViewRenderer::SetValue was called
         so that this instance knows what to render.

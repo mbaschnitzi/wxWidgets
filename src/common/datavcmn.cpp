@@ -31,6 +31,9 @@
 #include "wx/choice.h"
 #include "wx/imaglist.h"
 #include "wx/renderer.h"
+#if wxUSE_ACCESSIBILITY
+    #include "wx/access.h"
+#endif // wxUSE_ACCESSIBILITY
 
 const char wxDataViewCtrlNameStr[] = "dataviewCtrl";
 
@@ -1005,7 +1008,7 @@ wxDataViewCustomRendererBase::RenderText(const wxString& text,
 
     int flags = 0;
     if ( state & wxDATAVIEW_CELL_SELECTED )
-        flags |= wxCONTROL_SELECTED | wxCONTROL_FOCUSED;
+        flags |= wxCONTROL_SELECTED;
     if ( !GetOwner()->GetOwner()->IsEnabled() )
         flags |= wxCONTROL_DISABLED;
 
@@ -1612,7 +1615,7 @@ void wxDataViewEvent::Init(wxDataViewCtrlBase* dvc,
 {
     m_item = item;
     m_col = column ? column->GetModelColumn() : -1;
-    m_model = dvc->GetModel();
+    m_model = dvc ? dvc->GetModel() : NULL;
     m_column = column;
     m_pos = wxDefaultPosition;
     m_cacheFrom = 0;
@@ -1778,6 +1781,7 @@ wxDataViewChoiceByIndexRenderer::wxDataViewChoiceByIndexRenderer( const wxArrayS
                                   wxDataViewCellMode mode, int alignment ) :
       wxDataViewChoiceRenderer( choices, mode, alignment )
 {
+    m_variantType = wxS("long");
 }
 
 wxWindow* wxDataViewChoiceByIndexRenderer::CreateEditorCtrl( wxWindow *parent, wxRect labelRect, const wxVariant &value )
@@ -2734,6 +2738,58 @@ void wxDataViewTreeCtrl::OnSize( wxSizeEvent &event )
 #endif
     event.Skip( true );
 }
+
+#if wxUSE_ACCESSIBILITY
+wxAccessible* wxDataViewTreeCtrl::CreateAccessible()
+{
+    return new wxDataViewTreeCtrlAccessible(this);
+}
+#endif // wxUSE_ACCESSIBILITY
+
+#if wxUSE_ACCESSIBILITY
+//-----------------------------------------------------------------------------
+// wxDataViewTreeCtrlAccessible
+//-----------------------------------------------------------------------------
+
+wxDataViewTreeCtrlAccessible::wxDataViewTreeCtrlAccessible(wxDataViewTreeCtrl* win)
+    : wxDataViewCtrlAccessible(win)
+{
+}
+
+// Gets the name of the specified object.
+wxAccStatus wxDataViewTreeCtrlAccessible::GetName(int childId, wxString* name)
+{
+    wxDataViewTreeCtrl* dvCtrl = wxDynamicCast(GetWindow(), wxDataViewTreeCtrl);
+    wxCHECK( dvCtrl, wxACC_FAIL );
+
+    if ( childId == wxACC_SELF )
+    {
+        *name = dvCtrl->GetName();
+    }
+    else
+    {
+        wxDataViewItem item = dvCtrl->GetItemByRow(childId-1);
+        if ( !item.IsOk() )
+        {
+            return wxACC_NOT_IMPLEMENTED;
+        }
+
+        wxString itemName = dvCtrl->GetItemText(item);
+        if ( itemName.empty() )
+        {
+            // Return row number if not textual column found.
+            // Rows are numbered from 1.
+            *name = wxString::Format(_("Row %i"), childId);
+        }
+        else
+        {
+            *name = itemName;
+        }
+    }
+
+    return wxACC_OK;
+}
+#endif // wxUSE_ACCESSIBILITY
 
 #endif // wxUSE_DATAVIEWCTRL
 

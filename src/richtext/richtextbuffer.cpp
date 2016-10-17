@@ -12487,6 +12487,9 @@ bool wxRichTextImage::LoadImageCache(wxDC& dc, wxRichTextDrawingContext& context
         return true;
     }
 
+    wxRichTextAttr attr(GetAttributes());
+    AdjustAttributes(attr, context);
+
     if (!context.GetImagesEnabled())
     {
         if (resetCache || !m_imageCache.IsOk())
@@ -12495,7 +12498,7 @@ bool wxRichTextImage::LoadImageCache(wxDC& dc, wxRichTextDrawingContext& context
             m_imageCache = bitmap;
             m_imageState = ImageState_Loaded;
         }
-        retImageSize = wxSize(m_imageCache.GetWidth(), m_imageCache.GetHeight());
+        retImageSize = wxSize(m_imageCache.GetScaledWidth(), m_imageCache.GetScaledHeight());
         return true;
     }
 
@@ -12513,9 +12516,9 @@ bool wxRichTextImage::LoadImageCache(wxDC& dc, wxRichTextDrawingContext& context
         {
             wxBitmap bitmap(image_placeholder24x24_xpm);
             m_imageCache = bitmap;
-            m_originalImageSize = wxSize(bitmap.GetWidth(), bitmap.GetHeight());
+            m_originalImageSize = wxSize(bitmap.GetScaledWidth(), bitmap.GetScaledHeight());
             m_imageState = ImageState_Bad;
-            retImageSize = wxSize(m_imageCache.GetWidth(), m_imageCache.GetHeight());
+            retImageSize = m_originalImageSize;
             return false;
         }
 
@@ -12574,18 +12577,18 @@ bool wxRichTextImage::LoadImageCache(wxDC& dc, wxRichTextDrawingContext& context
 
     wxTextAttrDimensionConverter converter(dc, buffer ? buffer->GetScale() : 1.0, wxSize(parentWidth, parentHeight));
 
-    if (GetAttributes().GetTextBoxAttr().GetWidth().IsValid() && GetAttributes().GetTextBoxAttr().GetWidth().GetValue() > 0)
+    if (attr.GetTextBoxAttr().GetWidth().IsValid() && attr.GetTextBoxAttr().GetWidth().GetValue() > 0)
     {
-        int widthPixels = converter.GetPixels(GetAttributes().GetTextBoxAttr().GetWidth(), wxHORIZONTAL);
+        int widthPixels = converter.GetPixels(attr.GetTextBoxAttr().GetWidth(), wxHORIZONTAL);
         if (widthPixels > 0)
             width = widthPixels;
     }
 
     // Limit to max width
 
-    if (GetAttributes().GetTextBoxAttr().GetMaxSize().GetWidth().IsValid() && GetAttributes().GetTextBoxAttr().GetMaxSize().GetWidth().GetValue() > 0)
+    if (attr.GetTextBoxAttr().GetMaxSize().GetWidth().IsValid() && attr.GetTextBoxAttr().GetMaxSize().GetWidth().GetValue() > 0)
     {
-        int mw = converter.GetPixels(GetAttributes().GetTextBoxAttr().GetMaxSize().GetWidth(), wxHORIZONTAL);
+        int mw = converter.GetPixels(attr.GetTextBoxAttr().GetMaxSize().GetWidth(), wxHORIZONTAL);
 
         // If we already have a smaller max width due to the constraints of the control size,
         // don't use the larger max width.
@@ -12600,9 +12603,9 @@ bool wxRichTextImage::LoadImageCache(wxDC& dc, wxRichTextDrawingContext& context
     if (width != m_originalImageSize.GetWidth())
         height = (int) (float(m_originalImageSize.GetHeight()) * (float(width)/float(m_originalImageSize.GetWidth())));
 
-    if (GetAttributes().GetTextBoxAttr().GetHeight().IsValid() && GetAttributes().GetTextBoxAttr().GetHeight().GetValue() > 0)
+    if (attr.GetTextBoxAttr().GetHeight().IsValid() && attr.GetTextBoxAttr().GetHeight().GetValue() > 0)
     {
-        int heightPixels = converter.GetPixels(GetAttributes().GetTextBoxAttr().GetHeight(), wxVERTICAL);
+        int heightPixels = converter.GetPixels(attr.GetTextBoxAttr().GetHeight(), wxVERTICAL);
         if (heightPixels > 0)
             height = heightPixels;
 
@@ -12613,9 +12616,9 @@ bool wxRichTextImage::LoadImageCache(wxDC& dc, wxRichTextDrawingContext& context
 
     // Limit to max height
 
-    if (GetAttributes().GetTextBoxAttr().GetMaxSize().GetHeight().IsValid() && GetAttributes().GetTextBoxAttr().GetMaxSize().GetHeight().GetValue() > 0)
+    if (attr.GetTextBoxAttr().GetMaxSize().GetHeight().IsValid() && attr.GetTextBoxAttr().GetMaxSize().GetHeight().GetValue() > 0)
     {
-        int mh = converter.GetPixels(GetAttributes().GetTextBoxAttr().GetMaxSize().GetHeight(), wxVERTICAL);
+        int mh = converter.GetPixels(attr.GetTextBoxAttr().GetMaxSize().GetHeight(), wxVERTICAL);
         if (mh > 0)
             maxHeight = mh;
     }
@@ -13862,7 +13865,10 @@ void wxTextBoxAttr::CollectCommonAttributes(const wxTextBoxAttr& attr, wxTextBox
         }
     }
     else
+    {
         absentAttr.AddFlag(wxTEXT_BOX_ATTR_FLOAT);
+        RemoveFlag(wxTEXT_BOX_ATTR_FLOAT);
+    }
 
     if (attr.HasClearMode())
     {
@@ -13881,7 +13887,10 @@ void wxTextBoxAttr::CollectCommonAttributes(const wxTextBoxAttr& attr, wxTextBox
         }
     }
     else
+    {
         absentAttr.AddFlag(wxTEXT_BOX_ATTR_CLEAR);
+        RemoveFlag(wxTEXT_BOX_ATTR_CLEAR);
+    }
 
     if (attr.HasCollapseBorders())
     {
@@ -13900,7 +13909,10 @@ void wxTextBoxAttr::CollectCommonAttributes(const wxTextBoxAttr& attr, wxTextBox
         }
     }
     else
+    {
         absentAttr.AddFlag(wxTEXT_BOX_ATTR_COLLAPSE_BORDERS);
+        RemoveFlag(wxTEXT_BOX_ATTR_COLLAPSE_BORDERS);
+    }
 
     if (attr.HasVerticalAlignment())
     {
@@ -13919,7 +13931,10 @@ void wxTextBoxAttr::CollectCommonAttributes(const wxTextBoxAttr& attr, wxTextBox
         }
     }
     else
+    {
         absentAttr.AddFlag(wxTEXT_BOX_ATTR_VERTICAL_ALIGNMENT);
+        RemoveFlag(wxTEXT_BOX_ATTR_VERTICAL_ALIGNMENT);
+    }
 
     if (attr.HasWhitespaceMode())
     {
@@ -13938,7 +13953,10 @@ void wxTextBoxAttr::CollectCommonAttributes(const wxTextBoxAttr& attr, wxTextBox
         }
     }
     else
+    {
         absentAttr.AddFlag(wxTEXT_BOX_ATTR_WHITESPACE);
+        RemoveFlag(wxTEXT_BOX_ATTR_WHITESPACE);
+    }
 
     if (attr.HasCornerRadius())
     {
@@ -13958,7 +13976,10 @@ void wxTextBoxAttr::CollectCommonAttributes(const wxTextBoxAttr& attr, wxTextBox
         }
     }
     else
+    {
         absentAttr.AddFlag(wxTEXT_BOX_ATTR_CORNER_RADIUS);
+        RemoveFlag(wxTEXT_BOX_ATTR_CORNER_RADIUS);
+    }
 
     if (attr.HasBoxStyleName())
     {
@@ -13977,7 +13998,10 @@ void wxTextBoxAttr::CollectCommonAttributes(const wxTextBoxAttr& attr, wxTextBox
         }
     }
     else
+    {
         absentAttr.AddFlag(wxTEXT_BOX_ATTR_BOX_STYLE_NAME);
+        RemoveFlag(wxTEXT_BOX_ATTR_BOX_STYLE_NAME);
+    }
 
     m_margins.CollectCommonAttributes(attr.m_margins, clashingAttr.m_margins, absentAttr.m_margins);
     m_padding.CollectCommonAttributes(attr.m_padding, clashingAttr.m_padding, absentAttr.m_padding);
@@ -14137,7 +14161,10 @@ void wxTextAttrBorder::CollectCommonAttributes(const wxTextAttrBorder& attr, wxT
         }
     }
     else
+    {
         absentAttr.AddFlag(wxTEXT_BOX_ATTR_BORDER_STYLE);
+        RemoveFlag(wxTEXT_BOX_ATTR_BORDER_STYLE);
+    }
 
     if (attr.HasColour())
     {
@@ -14156,7 +14183,10 @@ void wxTextAttrBorder::CollectCommonAttributes(const wxTextAttrBorder& attr, wxT
         }
     }
     else
+    {
         absentAttr.AddFlag(wxTEXT_BOX_ATTR_BORDER_COLOUR);
+        RemoveFlag(wxTEXT_BOX_ATTR_BORDER_COLOUR);
+    }
 
     m_borderWidth.CollectCommonAttributes(attr.m_borderWidth, clashingAttr.m_borderWidth, absentAttr.m_borderWidth);
 }
@@ -14277,7 +14307,11 @@ void wxTextAttrDimension::CollectCommonAttributes(const wxTextAttrDimension& att
         }
     }
     else
+    {
         absentAttr.SetValid(true);
+        SetValue(0, 0);
+        SetValid(false);
+    }
 }
 
 wxTextAttrDimensionConverter::wxTextAttrDimensionConverter(wxDC& dc, double scale, const wxSize& parentSize)
@@ -14458,6 +14492,10 @@ void wxTextAttrCollectCommonAttributes(wxTextAttr& currentStyle, const wxTextAtt
 {
     absentAttr.SetFlags(absentAttr.GetFlags() | (~attr.GetFlags() & wxTEXT_ATTR_ALL));
     absentAttr.SetTextEffectFlags(absentAttr.GetTextEffectFlags() | (~attr.GetTextEffectFlags() & 0xFFFF));
+
+    // Remove flags for attributes that are absent
+    currentStyle.SetFlags(currentStyle.GetFlags() & ~absentAttr.GetFlags());
+    currentStyle.SetTextEffectFlags(currentStyle.GetTextEffectFlags() & ~absentAttr.GetTextEffectFlags());
 
     long forbiddenFlags = clashingAttr.GetFlags()|absentAttr.GetFlags();
 
@@ -15741,7 +15779,10 @@ void wxTextAttrShadow::CollectCommonAttributes(const wxTextAttrShadow& attr, wxT
         }
     }
     else
+    {
         absentAttr.AddFlag(wxTEXT_BOX_ATTR_BORDER_COLOUR);
+        RemoveFlag(wxTEXT_BOX_ATTR_BORDER_COLOUR);
+    }
 }
 
 #endif

@@ -158,32 +158,32 @@ public:
         }
     }
 
-    virtual wxBitmap GetBitmap(wxAnyButton::State which) const
+    virtual wxBitmap GetBitmap(wxAnyButton::State which) const wxOVERRIDE
     {
         return m_bitmaps[which];
     }
 
-    virtual void SetBitmap(const wxBitmap& bitmap, wxAnyButton::State which)
+    virtual void SetBitmap(const wxBitmap& bitmap, wxAnyButton::State which) wxOVERRIDE
     {
         m_bitmaps[which] = bitmap;
     }
 
-    virtual wxSize GetBitmapMargins() const
+    virtual wxSize GetBitmapMargins() const wxOVERRIDE
     {
         return m_margin;
     }
 
-    virtual void SetBitmapMargins(wxCoord x, wxCoord y)
+    virtual void SetBitmapMargins(wxCoord x, wxCoord y) wxOVERRIDE
     {
         m_margin = wxSize(x, y);
     }
 
-    virtual wxDirection GetBitmapPosition() const
+    virtual wxDirection GetBitmapPosition() const wxOVERRIDE
     {
         return m_dir;
     }
 
-    virtual void SetBitmapPosition(wxDirection dir)
+    virtual void SetBitmapPosition(wxDirection dir) wxOVERRIDE
     {
         m_dir = dir;
     }
@@ -254,12 +254,12 @@ public:
         UpdateImageInfo();
     }
 
-    virtual wxBitmap GetBitmap(wxAnyButton::State which) const
+    virtual wxBitmap GetBitmap(wxAnyButton::State which) const wxOVERRIDE
     {
         return m_iml.GetBitmap(which);
     }
 
-    virtual void SetBitmap(const wxBitmap& bitmap, wxAnyButton::State which)
+    virtual void SetBitmap(const wxBitmap& bitmap, wxAnyButton::State which) wxOVERRIDE
     {
         m_iml.Replace(which, bitmap);
 
@@ -271,12 +271,12 @@ public:
         UpdateImageInfo();
     }
 
-    virtual wxSize GetBitmapMargins() const
+    virtual wxSize GetBitmapMargins() const wxOVERRIDE
     {
         return wxSize(m_data.margin.left, m_data.margin.top);
     }
 
-    virtual void SetBitmapMargins(wxCoord x, wxCoord y)
+    virtual void SetBitmapMargins(wxCoord x, wxCoord y) wxOVERRIDE
     {
         RECT& margin = m_data.margin;
         margin.left =
@@ -290,7 +290,7 @@ public:
         }
     }
 
-    virtual wxDirection GetBitmapPosition() const
+    virtual wxDirection GetBitmapPosition() const wxOVERRIDE
     {
         switch ( m_data.uAlign )
         {
@@ -312,7 +312,7 @@ public:
         }
     }
 
-    virtual void SetBitmapPosition(wxDirection dir)
+    virtual void SetBitmapPosition(wxDirection dir) wxOVERRIDE
     {
         UINT alignNew;
         switch ( dir )
@@ -414,7 +414,7 @@ wxSize wxMSWButton::GetFittingSize(wxWindow *win,
     {
         // We still need some margin or the text would be overwritten, just
         // make it as small as possible.
-        sizeBtn.x += (3*win->GetCharWidth());
+        sizeBtn.x += 2*win->GetCharWidth();
     }
     else
     {
@@ -443,30 +443,27 @@ wxSize wxMSWButton::IncreaseToStdSizeAndCache(wxControl *btn, const wxSize& size
 {
     wxSize sizeBtn(size);
 
-    // The 50x14 button size is documented in the "Recommended sizing and
-    // spacing" section of MSDN layout article.
-    //
-    // Note that we intentionally don't use GetDefaultSize() here, because
-    // it's inexact -- dialog units depend on this dialog's font.
-    const wxSize sizeDef = btn->ConvertDialogToPixels(wxSize(50, 14));
-
-    // All buttons should have at least the standard size, unless the user
-    // explicitly wants them to be as small as possible and used wxBU_EXACTFIT
-    // style to indicate this.
-    const bool incToStdSize = !btn->HasFlag(wxBU_EXACTFIT);
-    if ( incToStdSize )
+    // By default all buttons have at least the standard size.
+    if ( !btn->HasFlag(wxBU_EXACTFIT) )
     {
-        if ( sizeBtn.x < sizeDef.x )
-            sizeBtn.x = sizeDef.x;
+        // The 50x14 button size is documented in the "Recommended sizing and
+        // spacing" section of MSDN layout article.
+        //
+        // Note that we intentionally don't use GetDefaultSize() here, because
+        // it's inexact -- dialog units depend on this dialog's font.
+        const wxSize sizeDef = btn->ConvertDialogToPixels(wxSize(50, 14));
+
+        sizeBtn.IncTo(sizeDef);
     }
-
-    // Notice that we really want to make all buttons with text label equally
-    // high, otherwise they look ugly and the existing code using wxBU_EXACTFIT
-    // only uses it to control width and not height.
-    if ( incToStdSize || !btn->GetLabel().empty() )
+    else // wxBU_EXACTFIT case
     {
-        if ( sizeBtn.y < sizeDef.y )
-            sizeBtn.y = sizeDef.y;
+        // Such buttons are typically used alongside a text control or similar,
+        // so make them as high as it.
+        int yText;
+        wxGetCharSize(GetHwndOf(btn), NULL, &yText, btn->GetFont());
+        yText = EDIT_HEIGHT_FROM_CHAR_HEIGHT(yText);
+
+        sizeBtn.IncTo(wxSize(-1, yText));
     }
 
     btn->CacheBestSize(sizeBtn);

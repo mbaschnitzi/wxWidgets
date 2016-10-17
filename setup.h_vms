@@ -3,7 +3,7 @@
  * Template for the set.h file for VMS                                       *
  * Created from setup.h_in                                                   *
  * Author : J.Jansen (joukj@hrem.nano.tudelft.nl)                            *
- * Date : 24 February 2016                                                   *
+ * Date : 14 June 2016                                                       *
  *                                                                           *
  *****************************************************************************/
 
@@ -270,6 +270,8 @@ typedef pid_t GPid;
 
 #define wxUSE_FSVOLUME      1
 
+#define wxUSE_SECRETSTORE   1
+
 #define wxUSE_STDPATHS      1
 
 #define wxUSE_TEXTBUFFER    1
@@ -399,7 +401,7 @@ typedef pid_t GPid;
 #ifdef __WXGTK3__
 #   define wxUSE_GRAPHICS_CONTEXT 1
 #else
-#   define wxUSE_GRAPHICS_CONTEXT 0
+#   define wxUSE_GRAPHICS_CONTEXT 1
 #endif
 #endif
 
@@ -709,6 +711,16 @@ typedef pid_t GPid;
 
 #define wxUSE_GSTREAMER_PLAYER 0
 
+/*
+   Use XTest extension to implement wxUIActionSimulator?
+
+   Default is 1, it is set to 0 if the necessary headers/libraries are not
+   found by configure.
+
+   Recommended setting: 1, wxUIActionSimulator won't work in wxGTK3 without it.
+ */
+#define wxUSE_XTEST 1
+
 /* --- start MSW options --- */
 
 #define wxUSE_GRAPHICS_GDIPLUS wxUSE_GRAPHICS_CONTEXT
@@ -768,11 +780,6 @@ typedef pid_t GPid;
 #define wxUSE_CRASHREPORT 0
 
 /* --- end MSW options --- */
-
-/*
- * Define if your compiler supports the explicit keyword
- */
-#define HAVE_EXPLICIT 1
 
 /*
  * Define if your compiler has C99 va_copy

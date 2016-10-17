@@ -516,6 +516,7 @@
 #define wxSTC_LEX_SREC 117
 #define wxSTC_LEX_IHEX 118
 #define wxSTC_LEX_TEHEX 119
+#define wxSTC_LEX_JSON 120
 
 /// When a lexer specifies its language as SCLEX_AUTOMATIC it receives a
 /// value assigned in sequence from SCLEX_AUTOMATIC+1.
@@ -2388,6 +2389,24 @@
 #define wxSTC_HEX_CHECKSUM_WRONG 17
 #define wxSTC_HEX_GARBAGE 18
 
+/// Lexical state for SCLEX_IHEX (shared with Srec)
+/// Lexical state for SCLEX_TEHEX (shared with Srec)
+/// Lexical states for SCLEX_JSON
+#define wxSTC_JSON_DEFAULT 0
+#define wxSTC_JSON_NUMBER 1
+#define wxSTC_JSON_STRING 2
+#define wxSTC_JSON_STRINGEOL 3
+#define wxSTC_JSON_PROPERTYNAME 4
+#define wxSTC_JSON_ESCAPESEQUENCE 5
+#define wxSTC_JSON_LINECOMMENT 6
+#define wxSTC_JSON_BLOCKCOMMENT 7
+#define wxSTC_JSON_OPERATOR 8
+#define wxSTC_JSON_URI 9
+#define wxSTC_JSON_COMPACTIRI 10
+#define wxSTC_JSON_KEYWORD 11
+#define wxSTC_JSON_LDKEYWORD 12
+#define wxSTC_JSON_ERROR 13
+
 //}}}
 
 // Commands that can be bound to keystrokes {{{
@@ -2781,6 +2800,10 @@
     @event{EVT_STC_CLIPBOARD_PASTE(id, fn)}
         Process a @c wxEVT_STC_CLIPBOARD_PASTE event, generated when text is being pasted from the clipboard. Use wxStyledTextEvent::SetString() to modify the text that will be inserted into the control. Valid event functions: @link wxStyledTextEvent::GetPosition GetPosition@endlink, @link wxStyledTextEvent::GetString GetString@endlink, @link wxStyledTextEvent::SetString SetString@endlink.
         @since 3.1.0
+
+    @event{EVT_STC_AUTOCOMP_COMPLETED(id, fn)}
+        Process a @c wxEVT_STC_AUTOCOMP_COMPLETED event, generated after an autocompletion list has closed and inserted its text into the control. Valid event functions: @link wxStyledTextEvent::GetPosition GetPosition@endlink, @link wxStyledTextEvent::GetString GetString@endlink, @link wxStyledTextEvent::GetKey GetKey@endlink, @link wxStyledTextEvent::GetListCompletionMethod GetListCompletionMethod@endlink.
+        @since 3.1.1
 
     @endEventTable
 
@@ -6339,6 +6362,11 @@ public:
     wxCharBuffer GetSelectedTextRaw();
 
     /**
+       Retrieve the target text.
+    */
+    wxCharBuffer GetTargetTextRaw();
+
+    /**
        Retrieve a range of text.
     */
     wxCharBuffer GetTextRangeRaw(int startPos, int endPos);
@@ -6446,6 +6474,7 @@ public:
     void SetToken(int val);
     void SetAnnotationLinesAdded(int val);
     void SetUpdated(int val);
+    void SetListCompletionMethod(int val);
     void SetDragText(const wxString& val);
     void SetDragFlags(int flags);
     void SetDragResult(wxDragResult val);
@@ -6473,6 +6502,7 @@ public:
     int  GetToken() const;
     int  GetAnnotationsLinesAdded() const;
     int  GetUpdated() const;
+    int  GetListCompletionMethod() const;
     
     /**
         @deprecated Use GetString() instead.

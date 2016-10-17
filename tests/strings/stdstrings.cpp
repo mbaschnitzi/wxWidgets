@@ -20,6 +20,8 @@
     #include "wx/wx.h"
 #endif // WX_PRECOMP
 
+#include <algorithm>
+
 // ----------------------------------------------------------------------------
 // test class
 // ----------------------------------------------------------------------------
@@ -50,6 +52,7 @@ private:
 #if wxUSE_STD_STRING
         CPPUNIT_TEST( StdConversion );
 #endif
+        CPPUNIT_TEST( StdAlgo );
     CPPUNIT_TEST_SUITE_END();
 
     void StdConstructors();
@@ -71,6 +74,7 @@ private:
 #if wxUSE_STD_STRING
     void StdConversion();
 #endif
+    void StdAlgo();
 
     wxDECLARE_NO_COPY_CLASS(StdStringTestCase);
 };
@@ -617,3 +621,16 @@ void StdStringTestCase::StdConversion()
     CPPUNIT_ASSERT_EQUAL( wxString::FromUTF8(s11), "" );
 }
 #endif // wxUSE_STD_STRING
+
+void StdStringTestCase::StdAlgo()
+{
+    // Unfortunately this currently doesn't work with libc++ in C++11 mode, see
+    // comment near iter_swap() definition in wx/string.h.
+#if __cplusplus < 201103L || !defined(_LIBCPP_VERSION)
+    wxString s("AB");
+    std::reverse(s.begin(), s.end());
+    CPPUNIT_ASSERT_EQUAL( "BA", s );
+#else
+    wxLogWarning("Skipping std::reverse() test broken with C++11/libc++");
+#endif
+}

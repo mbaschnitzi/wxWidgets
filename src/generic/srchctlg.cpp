@@ -120,7 +120,7 @@ protected:
     // to do this easily and as there is much in that code I don't understand
     // (notably what is the logic for buttons sizing?) I prefer to not touch it
     // at all.
-    virtual wxSize DoGetBestSize() const
+    virtual wxSize DoGetBestSize() const wxOVERRIDE
     {
         const long flags = GetWindowStyleFlag();
         wxSearchTextCtrl* const self = const_cast<wxSearchTextCtrl*>(this);
@@ -819,6 +819,24 @@ bool wxSearchCtrl::SetBackgroundColour(const wxColour& colour)
 
     return true;
 }
+
+
+// Autocomplete
+bool wxSearchCtrl::DoAutoCompleteStrings(const wxArrayString &choices)
+{
+    return m_text->AutoComplete( choices );
+}
+
+bool wxSearchCtrl::DoAutoCompleteFileNames(int flags)
+{
+    return flags == wxFILE ? m_text->AutoCompleteFileNames() : m_text->AutoCompleteDirectories();
+}
+
+bool wxSearchCtrl::DoAutoCompleteCustom(wxTextCompleter *completer)
+{
+    return m_text->AutoComplete(completer);
+}
+
 
 // search control generic only
 void wxSearchCtrl::SetSearchBitmap( const wxBitmap& bitmap )

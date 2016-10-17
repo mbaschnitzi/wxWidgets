@@ -461,7 +461,7 @@ public:
         Draws the part of the cell not occupied by the control: the base class
         version just fills it with background colour from the attribute.
     */
-    virtual void PaintBackground(wxDC& dc, const wxRect& rectCell, wxGridCellAttr& attr);
+    virtual void PaintBackground(wxDC& dc, const wxRect& rectCell, const wxGridCellAttr& attr);
 
     /**
         Reset the value in the control back to its starting value.
@@ -626,7 +626,7 @@ public:
     @class wxGridCellEnumEditor
 
     Grid cell editor which displays an enum number as a textual equivalent
-    (eg. data in cell is 0,1,2 ... n the cell could be displayed as
+    (e.g. data in cell is 0,1,2 ... n the cell could be displayed as
     "John","Fred"..."Bob" in the combo choice box).
 
     @library{wxadv}
@@ -1741,8 +1741,8 @@ public:
     /*!
         @name Table Row and Column Labels
 
-        By default the numbers are used for labeling rows and Latin letters for
-        labeling columns. If the table has more than 26 columns, the pairs of
+        By default the numbers are used for labelling rows and Latin letters for
+        labelling columns. If the table has more than 26 columns, the pairs of
         letters are used starting from the 27-th one and so on, i.e. the
         sequence of labels is A, B, ..., Z, AA, AB, ..., AZ, BA, ..., ..., ZZ,
         AAA, ...
@@ -1879,71 +1879,6 @@ enum wxGridTableRequest
     /// Columns have been deleted from the table.
     wxGRIDTABLE_NOTIFY_COLS_DELETED
 };
-
-
-/**
-   @class wxGridTableMessage
-
-   A simple class used to pass messages from the table to the grid.
-
-    @library{wxadv}
-    @category{grid}
-*/
-class wxGridTableMessage
-{
-public:
-    wxGridTableMessage();
-    wxGridTableMessage( wxGridTableBase *table, int id,
-                        int comInt1 = -1,
-                        int comInt2 = -1 );
-
-    void SetTableObject( wxGridTableBase *table );
-    wxGridTableBase * GetTableObject() const;
-    void SetId( int id );
-    int  GetId();
-    void SetCommandInt( int comInt1 );
-    int  GetCommandInt();
-    void SetCommandInt2( int comInt2 );
-    int  GetCommandInt2();
-};
-
-
-
-/**
-   @class wxGridStringTable
-
-   Simplest type of data table for a grid for small tables of strings
-   that are stored in memory
-*/
-class wxGridStringTable : public wxGridTableBase
-{
-public:
-    wxGridStringTable();
-    wxGridStringTable( int numRows, int numCols );
-
-    // these are pure virtual in wxGridTableBase
-    virtual int GetNumberRows();
-    virtual int GetNumberCols();
-    virtual wxString GetValue( int row, int col );
-    virtual void SetValue( int row, int col, const wxString& value );
-
-    // overridden functions from wxGridTableBase
-    void Clear();
-    bool InsertRows( size_t pos = 0, size_t numRows = 1 );
-    bool AppendRows( size_t numRows = 1 );
-    bool DeleteRows( size_t pos = 0, size_t numRows = 1 );
-    bool InsertCols( size_t pos = 0, size_t numCols = 1 );
-    bool AppendCols( size_t numCols = 1 );
-    bool DeleteCols( size_t pos = 0, size_t numCols = 1 );
-
-    void SetRowLabelValue( int row, const wxString& );
-    void SetColLabelValue( int col, const wxString& );
-    wxString GetRowLabelValue( int row );
-    wxString GetColLabelValue( int col );
-};
-
-
-
 
 
 

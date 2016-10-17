@@ -210,8 +210,8 @@ static bool gs_triedToLoadSetLayout = false;
 class wxGDIDLLsCleanupModule : public wxModule
 {
 public:
-    virtual bool OnInit() { return true; }
-    virtual void OnExit()
+    virtual bool OnInit() wxOVERRIDE { return true; }
+    virtual void OnExit() wxOVERRIDE
     {
         wxMSIMG32DLL.Unload();
         wxGDI32DLL.Unload();
@@ -240,13 +240,6 @@ wxIMPLEMENT_DYNAMIC_CLASS(wxGDIDLLsCleanupModule, wxModule);
 
 #endif // USE_DYNAMIC_GDI_FUNCS
 
-// Namespace for the wrapper functions, hopefully one day we'll be able to get
-// rid of all of them and then it will be easy to find all occurrences of their
-// use by just searching for this namespace name.
-//
-// All of the functions in this namespace must work *exactly* like the standard
-// functions with the same name and just return an error if dynamically loading
-// them failed.
 namespace wxDynLoadWrappers
 {
 
@@ -317,19 +310,16 @@ BOOL GradientFill(HDC hdc, PTRIVERTEX pVert, ULONG numVert,
 
 #elif defined(USE_STATIC_GDI_FUNCS)
 
-inline
 DWORD GetLayout(HDC hdc)
 {
     return ::GetLayout(hdc);
 }
 
-inline
 DWORD SetLayout(HDC hdc, DWORD dwLayout)
 {
     return ::SetLayout(hdc, dwLayout);
 }
 
-inline
 BOOL AlphaBlend(HDC hdcDest, int xDest, int yDest, int wDest, int hDest,
                 HDC hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc,
                 BLENDFUNCTION bf)
@@ -339,7 +329,6 @@ BOOL AlphaBlend(HDC hdcDest, int xDest, int yDest, int wDest, int hDest,
                         bf);
 }
 
-inline
 BOOL GradientFill(HDC hdc, PTRIVERTEX pVert, ULONG numVert,
                   PVOID pMesh, ULONG numMesh, ULONG mode)
 {
@@ -590,24 +579,32 @@ void wxMSWDCImpl::UpdateClipBox()
     m_clipY1 = (wxCoord) YDEV2LOG(rect.top);
     m_clipX2 = (wxCoord) XDEV2LOG(rect.right);
     m_clipY2 = (wxCoord) YDEV2LOG(rect.bottom);
+    m_isClipBoxValid = true;
 }
 
 void
 wxMSWDCImpl::DoGetClippingBox(wxCoord *x, wxCoord *y, wxCoord *w, wxCoord *h) const
 {
     // check if we should try to retrieve the clipping region possibly not set
-    // by our SetClippingRegion() but preset by Windows:this can only happen
-    // when we're associated with an existing HDC usign SetHDC(), see there
-    if ( m_clipping && !m_clipX1 && !m_clipX2 )
+    // by our SetClippingRegion() but preset or modified by Windows: this
+    // can happen when we're associated with an existing HDC using SetHDC() or
+    // when wxDC logical coordinates are transformed with SetDeviceOrigin(),
+    // SetLogicalOrigin(), SetUserScale(), SetLogicalScale(),
+    // SetTransformMatrix(), ResetTransformMatrix().
+    if ( !m_isClipBoxValid )
     {
         wxMSWDCImpl *self = wxConstCast(this, wxMSWDCImpl);
         self->UpdateClipBox();
-
-        if ( !m_clipX1 && !m_clipX2 )
-            self->m_clipping = false;
     }
 
-    wxDCImpl::DoGetClippingBox(x, y, w, h);
+    if ( x )
+        *x = m_clipX1;
+    if ( y )
+        *y = m_clipY1;
+    if ( w )
+        *w = m_clipX2 - m_clipX1;
+    if ( h )
+        *h = m_clipY2 - m_clipY1;
 }
 
 // common part of DoSetClippingRegion() and DoSetDeviceClippingRegion()
@@ -636,6 +633,19 @@ void wxMSWDCImpl::DoSetClippingRegion(wxCoord x, wxCoord y, wxCoord w, wxCoord h
     // manually
     //
     // FIXME: possible +/-1 error here, to check!
+    // (x,y) has to represent the left-top corner of the region
+    // so if size values are negative we need to recalculate
+    // parameters of the region to get (x,y) at this corner.
+    if ( w < 0 )
+    {
+        w = -w;
+        x -= (w - 1);
+    }
+    if ( h < 0 )
+    {
+        h = -h;
+        y -= (h - 1);
+    }
     HRGN hrgn = ::CreateRectRgn(LogicalToDeviceX(x),
                                 LogicalToDeviceY(y),
                                 LogicalToDeviceX(x + w),
@@ -680,6 +690,7 @@ void wxMSWDCImpl::DestroyClippingRegion()
     }
 
     wxDCImpl::DestroyClippingRegion();
+    m_isClipBoxValid = false;
 }
 
 // ---------------------------------------------------------------------------
@@ -710,30 +721,23 @@ int wxMSWDCImpl::GetDepth() const
 
 void wxMSWDCImpl::Clear()
 {
-    RECT rect;
-    if (m_window)
-    {
-        GetClientRect((HWND) m_window->GetHWND(), &rect);
-    }
-    else
+    if ( !m_window )
     {
         // No, I think we should simply ignore this if printing on e.g.
         // a printer DC.
         // wxCHECK_RET( m_selectedBitmap.IsOk(), wxT("this DC can't be cleared") );
         if (!m_selectedBitmap.IsOk())
             return;
-
-        rect.left = rect.top = 0;
-        rect.right = m_selectedBitmap.GetWidth();
-        rect.bottom = m_selectedBitmap.GetHeight();
     }
-
-    ::OffsetRect(&rect, -m_deviceOriginX, -m_deviceOriginY);
-
-    (void) ::SetMapMode(GetHdc(), MM_TEXT);
 
     DWORD colour = ::GetBkColor(GetHdc());
     HBRUSH brush = ::CreateSolidBrush(colour);
+    RECT rect;
+    ::GetClipBox(GetHdc(), &rect);
+    // Inflate the box by 1 unit in each direction
+    // to compensate rounding errors if DC is the subject
+    // of complex transformation (is e.g. rotated).
+    ::InflateRect(&rect, 1, 1);
     ::FillRect(GetHdc(), &rect, brush);
     ::DeleteObject(brush);
 
@@ -1876,6 +1880,8 @@ void wxMSWDCImpl::RealizeScaleAndOrigin()
 
     ::SetViewportOrgEx(GetHdc(), m_deviceOriginX, m_deviceOriginY, NULL);
     ::SetWindowOrgEx(GetHdc(), m_logicalOriginX, m_logicalOriginY, NULL);
+
+    m_isClipBoxValid = false;
 }
 
 void wxMSWDCImpl::SetMapMode(wxMappingMode mode)
@@ -1985,6 +1991,8 @@ void wxMSWDCImpl::SetDeviceOrigin(wxCoord x, wxCoord y)
     wxDCImpl::SetDeviceOrigin( x, y );
 
     ::SetViewportOrgEx(GetHdc(), (int)m_deviceOriginX, (int)m_deviceOriginY, NULL);
+
+    m_isClipBoxValid = false;
 }
 
 // ----------------------------------------------------------------------------
@@ -2030,6 +2038,7 @@ bool wxMSWDCImpl::SetTransformMatrix(const wxAffineMatrix2D &matrix)
         return false;
     }
 
+    m_isClipBoxValid = false;
     return true;
 }
 
@@ -2055,6 +2064,7 @@ void wxMSWDCImpl::ResetTransformMatrix()
 {
     ::ModifyWorldTransform(GetHdc(), NULL, MWT_IDENTITY);
     ::SetGraphicsMode(GetHdc(), GM_COMPATIBLE);
+    m_isClipBoxValid = false;
 }
 
 #endif // wxUSE_DC_TRANSFORM_MATRIX
@@ -2284,8 +2294,10 @@ bool wxMSWDCImpl::DoStretchBlit(wxCoord xdest, wxCoord ydest,
         // if we already have a DIB, draw it using StretchDIBits(), otherwise
         // use StretchBlt() if available and finally fall back to BitBlt()
 
+        // Notice that we can't use StretchDIBits() when source and destination
+        // are the same as it can't, apparently, handle overlapping surfaces.
         const int caps = ::GetDeviceCaps(GetHdc(), RASTERCAPS);
-        if ( bmpSrc.IsOk() && (caps & RC_STRETCHDIB) )
+        if ( bmpSrc.IsOk() && (GetHdc() != hdcSrc) && (caps & RC_STRETCHDIB) )
         {
             DIBSECTION ds;
             wxZeroMemory(ds);
@@ -2554,8 +2566,8 @@ void wxMSWDCImpl::ClearCache()
 class wxDCModule : public wxModule
 {
 public:
-    virtual bool OnInit() { return true; }
-    virtual void OnExit() { wxMSWDCImpl::ClearCache(); }
+    virtual bool OnInit() wxOVERRIDE { return true; }
+    virtual void OnExit() wxOVERRIDE { wxMSWDCImpl::ClearCache(); }
 
 private:
     wxDECLARE_DYNAMIC_CLASS(wxDCModule);

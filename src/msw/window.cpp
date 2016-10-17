@@ -1822,6 +1822,26 @@ wxWindowMSW::DoMoveSibling(WXHWND hwnd, int x, int y, int width, int height)
 
     // otherwise (or if deferring failed) move the window in place immediately
 #endif // wxUSE_DEFERRED_SIZING
+
+    // toplevel window's coordinates are mirrored if the TLW is a child of another
+    // RTL window and changing width without moving the position would enlarge the
+    // window in the wrong direction, so we need to adjust for it
+    if ( IsTopLevel() )
+    {
+        // note that this may be different from GetParent() for wxDialogs
+        HWND tlwParent = ::GetParent((HWND)hwnd);
+        if ( tlwParent && (::GetWindowLong(tlwParent, GWL_EXSTYLE) & WS_EX_LAYOUTRTL) != 0 )
+        {
+            RECT old;
+            ::GetWindowRect((HWND) hwnd, &old);
+            if ( old.left == x && old.right - old.left != width )
+            {
+                x -= width - (old.right - old.left);
+            }
+            // else: not a simple resize
+        }
+    }
+
     if ( !::MoveWindow((HWND)hwnd, x, y, width, height, IsShown()) )
     {
         wxLogLastError(wxT("MoveWindow"));
@@ -1874,17 +1894,24 @@ void wxWindowMSW::DoSetSize(int x, int y, int width, int height, int sizeFlags)
 
     // ... and don't do anything (avoiding flicker) if it's already ok unless
     // we're forced to resize the window
-    if ( x == currentX && y == currentY &&
-         width == currentW && height == currentH &&
-            !(sizeFlags & wxSIZE_FORCE) )
+    if ( !(sizeFlags & wxSIZE_FORCE) )
     {
-        if (sizeFlags & wxSIZE_FORCE_EVENT)
+        if ( width == currentW && height == currentH )
         {
-            wxSizeEvent event( wxSize(width,height), GetId() );
-            event.SetEventObject( this );
-            HandleWindowEvent( event );
+            // We need to send wxSizeEvent ourselves because Windows won't do
+            // it if the size doesn't change.
+            if ( sizeFlags & wxSIZE_FORCE_EVENT )
+            {
+                wxSizeEvent event( wxSize(width,height), GetId() );
+                event.SetEventObject( this );
+                HandleWindowEvent( event );
+            }
+
+            // Still call DoMoveWindow() below if we need to change the
+            // position, otherwise we're done.
+            if ( x == currentX && y == currentY )
+                return;
         }
-        return;
     }
 
     if ( x == wxDefaultCoord && !(sizeFlags & wxSIZE_ALLOW_MINUS_ONE) )
@@ -1967,10 +1994,25 @@ void wxWindowMSW::DoSetClientSize(int width, int height)
         const int widthWin = rectWin.right - rectWin.left,
                   heightWin = rectWin.bottom - rectWin.top;
 
-        // MoveWindow positions the child windows relative to the parent, so
-        // adjust if necessary
-        if ( !IsTopLevel() )
+        if ( IsTopLevel() )
         {
+            // toplevel window's coordinates are mirrored if the TLW is a child of another
+            // RTL window and changing width without moving the position would enlarge the
+            // window in the wrong direction, so we need to adjust for it
+
+            // note that this may be different from GetParent() for wxDialogs
+            HWND tlwParent = ::GetParent(GetHwnd());
+            if ( tlwParent && (::GetWindowLong(tlwParent, GWL_EXSTYLE) & WS_EX_LAYOUTRTL) != 0 )
+            {
+                const int diffWidth = width - (rectClient.right - rectClient.left);
+                rectWin.left -= diffWidth;
+                rectWin.right -= diffWidth;
+            }
+        }
+        else
+        {
+            // MoveWindow positions the child windows relative to the parent, so
+            // adjust if necessary
             wxWindow *parent = GetParent();
             if ( parent )
             {
@@ -4888,7 +4930,13 @@ wxWindowMSW::MSWGetBgBrushForChild(WXHDC hDC, wxWindowMSW *child)
         RECT rc;
         ::GetWindowRect(GetHwndOf(child), &rc);
 
-        ::MapWindowPoints(NULL, GetHwnd(), (POINT *)&rc, 1);
+        // It is important to pass both points to MapWindowPoints() as in
+        // addition to converting them to our coordinate system, this function
+        // will also exchange the left and right coordinates if this window
+        // uses RTL layout, which is exactly what we need here as the child
+        // window origin is its _right_ top corner in this case and not the
+        // left one.
+        ::MapWindowPoints(NULL, GetHwnd(), (POINT *)&rc, 2);
 
         int x = rc.left,
             y = rc.top;
@@ -5034,9 +5082,10 @@ bool wxWindowMSW::HandleExitSizeMove()
     return HandleWindowEvent(event);
 }
 
+#if wxUSE_DEFERRED_SIZING
+
 bool wxWindowMSW::BeginRepositioningChildren()
 {
-#if wxUSE_DEFERRED_SIZING
     int numChildren = 0;
     for ( HWND child = ::GetWindow(GetHwndOf(this), GW_CHILD);
           child;
@@ -5062,12 +5111,10 @@ bool wxWindowMSW::BeginRepositioningChildren()
 
     // Return true to indicate that EndDeferWindowPos() should be called.
     return true;
-#endif // wxUSE_DEFERRED_SIZING
 }
 
 void wxWindowMSW::EndRepositioningChildren()
 {
-#if wxUSE_DEFERRED_SIZING
     wxASSERT_MSG( m_hDWP, wxS("Shouldn't be called") );
 
     // reset m_hDWP to NULL so that child windows don't try to use our
@@ -5091,8 +5138,9 @@ void wxWindowMSW::EndRepositioningChildren()
         wxWindowMSW * const child = node->GetData();
         child->MSWEndDeferWindowPos();
     }
-#endif // wxUSE_DEFERRED_SIZING
 }
+
+#endif // wxUSE_DEFERRED_SIZING
 
 bool wxWindowMSW::HandleSize(int WXUNUSED(w), int WXUNUSED(h), WXUINT wParam)
 {
@@ -7172,7 +7220,7 @@ bool wxWindowMSW::HandleHotKey(WXWPARAM wParam, WXLPARAM lParam)
 class wxIdleWakeUpModule : public wxModule
 {
 public:
-    virtual bool OnInit()
+    virtual bool OnInit() wxOVERRIDE
     {
         ms_hMsgHookProc = ::SetWindowsHookEx
                             (
@@ -7192,7 +7240,7 @@ public:
         return true;
     }
 
-    virtual void OnExit()
+    virtual void OnExit() wxOVERRIDE
     {
         ::UnhookWindowsHookEx(wxIdleWakeUpModule::ms_hMsgHookProc);
     }

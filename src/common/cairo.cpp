@@ -170,6 +170,10 @@
        (cairo_surface_t *surface), (surface) ) \
     m( cairo_set_source_surface, \
        (cairo_t *cr, cairo_surface_t *surface, double x, double y), (cr, surface, x, y) ) \
+    m( cairo_matrix_init_identity, \
+       (cairo_matrix_t *matrix), (matrix) ) \
+    m( cairo_clip_extents, \
+       (cairo_t *cr, double *x1, double *y1, double *x2, double *y2), (cr, x1, y1, x2, y2) ) \
 
 #ifdef __WXMAC__
 #define wxCAIRO_PLATFORM_METHODS(m) \
@@ -182,7 +186,9 @@
     m( cairo_surface_t*, cairo_win32_surface_create, \
         (HDC hdc), (hdc), NULL ) \
     m( cairo_surface_t*, cairo_win32_printing_surface_create, \
-        (HDC hdc), (hdc), NULL )
+        (HDC hdc), (hdc), NULL ) \
+    m( HDC, cairo_win32_surface_get_dc, \
+       (cairo_surface_t *surface), (surface), NULL )
 #else
 #define wxCAIRO_PLATFORM_METHODS(m) 
 #endif
@@ -234,6 +240,8 @@
        (), () , NULL ) \
     m( cairo_surface_t*, cairo_surface_create_similar_image, \
        (cairo_surface_t *other, cairo_format_t format, int width, int height), (other, format, width, height), NULL) \
+    m( cairo_status_t, cairo_surface_status, \
+       (cairo_surface_t *surface), (surface), CAIRO_STATUS_SUCCESS) \
     wxCAIRO_PLATFORM_METHODS(m)
 
 #define wxCAIRO_DECLARE_TYPE(rettype, name, args, argnames, defret) \

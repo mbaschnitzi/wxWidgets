@@ -17,9 +17,15 @@
 #include "wx/scrolwin.h"
 #include "wx/icon.h"
 #include "wx/vector.h"
+#if wxUSE_ACCESSIBILITY
+    #include "wx/access.h"
+#endif // wxUSE_ACCESSIBILITY
 
 class WXDLLIMPEXP_FWD_ADV wxDataViewMainWindow;
 class WXDLLIMPEXP_FWD_ADV wxDataViewHeaderWindow;
+#if wxUSE_ACCESSIBILITY
+class WXDLLIMPEXP_FWD_ADV wxDataViewCtrlAccessible;
+#endif // wxUSE_ACCESSIBILITY
 
 // ---------------------------------------------------------
 // wxDataViewColumn
@@ -172,6 +178,9 @@ class WXDLLIMPEXP_ADV wxDataViewCtrl : public wxDataViewCtrlBase,
     friend class wxDataViewHeaderWindow;
     friend class wxDataViewHeaderWindowMSW;
     friend class wxDataViewColumn;
+#if wxUSE_ACCESSIBILITY
+    friend class wxDataViewCtrlAccessible;
+#endif // wxUSE_ACCESSIBILITY
 
 public:
     wxDataViewCtrl() : wxScrollHelper(this)
@@ -256,10 +265,17 @@ public:
 
     virtual void EditItem(const wxDataViewItem& item, const wxDataViewColumn *column) wxOVERRIDE;
 
+    virtual bool SetHeaderAttr(const wxItemAttr& attr) wxOVERRIDE;
+
     // These methods are specific to generic wxDataViewCtrl implementation and
     // should not be used in portable code.
     wxColour GetAlternateRowColour() const { return m_alternateRowColour; }
     void SetAlternateRowColour(const wxColour& colour);
+
+    // The returned pointer is null if the control has wxDV_NO_HEADER style.
+    //
+    // This method is only available in the generic versions.
+    wxHeaderCtrl* GenericGetHeader() const;
 
 protected:
     void EnsureVisibleRowCol( int row, int column );
@@ -312,6 +328,10 @@ public:     // utility functions not part of the API
     virtual wxDataViewColumn *GetCurrentColumn() const wxOVERRIDE;
 
     virtual void OnInternalIdle() wxOVERRIDE;
+
+#if wxUSE_ACCESSIBILITY
+    virtual wxAccessible* CreateAccessible() wxOVERRIDE;
+#endif // wxUSE_ACCESSIBILITY
 
 private:
     virtual wxDataViewItem DoGetCurrentItem() const wxOVERRIDE;
@@ -369,5 +389,56 @@ private:
     wxDECLARE_EVENT_TABLE();
 };
 
+#if wxUSE_ACCESSIBILITY
+//-----------------------------------------------------------------------------
+// wxDataViewCtrlAccessible
+//-----------------------------------------------------------------------------
+
+class WXDLLIMPEXP_ADV wxDataViewCtrlAccessible: public wxWindowAccessible
+{
+public:
+    wxDataViewCtrlAccessible(wxDataViewCtrl* win);
+    virtual ~wxDataViewCtrlAccessible() {};
+
+    virtual wxAccStatus HitTest(const wxPoint& pt, int* childId,
+                                wxAccessible** childObject) wxOVERRIDE;
+
+    virtual wxAccStatus GetLocation(wxRect& rect, int elementId) wxOVERRIDE;
+
+    virtual wxAccStatus Navigate(wxNavDir navDir, int fromId,
+                                 int* toId, wxAccessible** toObject) wxOVERRIDE;
+
+    virtual wxAccStatus GetName(int childId, wxString* name) wxOVERRIDE;
+
+    virtual wxAccStatus GetChildCount(int* childCount) wxOVERRIDE;
+
+    virtual wxAccStatus GetChild(int childId, wxAccessible** child) wxOVERRIDE;
+
+    // wxWindowAccessible::GetParent() implementation is enough.
+    // virtual wxAccStatus GetParent(wxAccessible** parent) wxOVERRIDE;
+
+    virtual wxAccStatus DoDefaultAction(int childId) wxOVERRIDE;
+
+    virtual wxAccStatus GetDefaultAction(int childId, wxString* actionName) wxOVERRIDE;
+
+    virtual wxAccStatus GetDescription(int childId, wxString* description) wxOVERRIDE;
+
+    virtual wxAccStatus GetHelpText(int childId, wxString* helpText) wxOVERRIDE;
+
+    virtual wxAccStatus GetKeyboardShortcut(int childId, wxString* shortcut) wxOVERRIDE;
+
+    virtual wxAccStatus GetRole(int childId, wxAccRole* role) wxOVERRIDE;
+
+    virtual wxAccStatus GetState(int childId, long* state) wxOVERRIDE;
+
+    virtual wxAccStatus GetValue(int childId, wxString* strValue) wxOVERRIDE;
+
+    virtual wxAccStatus Select(int childId, wxAccSelectionFlags selectFlags) wxOVERRIDE;
+
+    virtual wxAccStatus GetFocus(int* childId, wxAccessible** child) wxOVERRIDE;
+
+    virtual wxAccStatus GetSelections(wxVariant* selections) wxOVERRIDE;
+};
+#endif // wxUSE_ACCESSIBILITY
 
 #endif // __GENERICDATAVIEWCTRLH__

@@ -373,8 +373,10 @@ draw_border(GtkWidget* widget, GdkEventExpose* gdk_event, wxWindow* win)
 #ifdef __WXGTK3__
         GtkStyleContext* sc = gtk_widget_get_style_context(win->m_wxwindow);
         GdkRGBA* c;
+        gtk_style_context_save(sc);
         gtk_style_context_set_state(sc, GTK_STATE_FLAG_NORMAL);
         gtk_style_context_get(sc, GTK_STATE_FLAG_NORMAL, "border-color", &c, NULL);
+        gtk_style_context_restore(sc);
         gdk_cairo_set_source_rgba(cr, c);
         gdk_rgba_free(c);
         cairo_set_line_width(cr, 1);
@@ -2604,15 +2606,12 @@ wxWindowGTK::~wxWindowGTK()
     if ( gs_deferredFocusOut == this )
         gs_deferredFocusOut = NULL;
 
-    // Unlike the above cases, which can happen in normal circumstances, a
-    // window shouldn't be destroyed while it still has capture, so even though
-    // we still reset the global pointer to avoid leaving it dangling and
-    // crashing afterwards, also complain about it.
+    // This is a real error, unlike the above, but it's already checked for in
+    // the base class dtor and asserting here results is useless and, even
+    // worse, results in abnormal termination when running unit tests which
+    // throw exceptions from their assert handler, so don't assert here.
     if ( g_captureWindow == this )
-    {
-        wxFAIL_MSG( wxS("Destroying window with mouse capture") );
         g_captureWindow = NULL;
-    }
 
     if (m_wxwindow)
     {
@@ -4576,9 +4575,11 @@ void wxWindowGTK::GTKApplyStyle(GtkWidget* widget, GtkRcStyle* WXUNUSED_IN_GTK3(
     cairo_pattern_t* pattern = NULL;
     if (m_backgroundColour.IsOk())
     {
+        gtk_style_context_save(context);
         gtk_style_context_set_state(context, GTK_STATE_FLAG_NORMAL);
         gtk_style_context_get(context,
             GTK_STATE_FLAG_NORMAL, "background-image", &pattern, NULL);
+        gtk_style_context_restore(context);
     }
     if (pattern)
     {

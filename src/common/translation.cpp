@@ -1485,12 +1485,6 @@ bool wxTranslations::AddStdCatalog()
     return true;
 }
 
-
-bool wxTranslations::AddCatalog(const wxString& domain)
-{
-    return AddCatalog(domain, wxLANGUAGE_ENGLISH_US);
-}
-
 #if !wxUSE_UNICODE
 bool wxTranslations::AddCatalog(const wxString& domain,
                                 wxLanguage msgIdLanguage,
@@ -1721,7 +1715,7 @@ wxString wxTranslations::GetHeaderValue(const wxString& header,
     if ( !trans || trans->empty() )
         return wxEmptyString;
 
-    size_t found = trans->find(header);
+    size_t found = trans->find(header + wxS(": "));
     if ( found == wxString::npos )
         return wxEmptyString;
 

@@ -171,6 +171,10 @@ public:
 
 class Document;
 
+inline int LevelNumber(int level) {
+	return level & SC_FOLDLEVELNUMBERMASK;
+}
+
 class LexInterface {
 protected:
 	Document *pdoc;
@@ -206,6 +210,9 @@ public:
 		}
 		bool operator==(const WatcherWithUserData &other) const {
 			return (watcher == other.watcher) && (userData == other.userData);
+		}
+		bool operator!=(const WatcherWithUserData &other) const {
+			return !((watcher == other.watcher) && (userData == other.userData));
 		}
 	};
 

@@ -288,6 +288,8 @@ public :
 #if wxUSE_MARKUP && wxOSX_USE_COCOA
     virtual void        SetLabelMarkup( const wxString& WXUNUSED(markup) ) { }
 #endif
+    virtual void        SetInitialLabel( const wxString& title, wxFontEncoding encoding )
+                            { SetLabel(title, encoding); }
 
     virtual void        SetCursor( const wxCursor & cursor ) = 0;
     virtual void        CaptureMouse() = 0;
@@ -686,6 +688,8 @@ public :
     virtual int GetLineLength(long lineNo) const ;
     virtual wxString GetLineText(long lineNo) const ;
     virtual void CheckSpelling(bool WXUNUSED(check)) { }
+    virtual void EnableAutomaticQuoteSubstitution(bool WXUNUSED(enable)) {}
+    virtual void EnableAutomaticDashSubstitution(bool WXUNUSED(enable)) {}
 
     virtual wxSize GetBestSize() const { return wxDefaultSize; }
 

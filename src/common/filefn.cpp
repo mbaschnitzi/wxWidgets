@@ -82,7 +82,7 @@
 #endif
 
 // TODO: Borland probably has _wgetcwd as well?
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
     #define HAVE_WGETCWD
 #endif
 
@@ -1042,7 +1042,11 @@ wxCopyFile (const wxString& file1, const wxString& file2, bool overwrite)
         return false;
     }
 
-    wxDoCopyFile(fileIn, fbuf, file2, overwrite);
+    if ( !wxDoCopyFile(fileIn, fbuf, file2, overwrite) )
+    {
+        wxLogError(_("Error copying the file '%s' to '%s'."), file1, file2);
+        return false;
+    }
 
 #if defined(__WXMAC__)
     // copy the resource fork of the file too if it's present

@@ -51,6 +51,7 @@ wxAuiXmlHandler::wxAuiXmlHandler()
     XRC_ADD_STYLE(wxAUI_NB_CLOSE_BUTTON);
     XRC_ADD_STYLE(wxAUI_NB_CLOSE_ON_ACTIVE_TAB);
     XRC_ADD_STYLE(wxAUI_NB_CLOSE_ON_ALL_TABS);
+    XRC_ADD_STYLE(wxAUI_NB_MIDDLE_CLICK_CLOSE);
     XRC_ADD_STYLE(wxAUI_NB_TOP);
     XRC_ADD_STYLE(wxAUI_NB_BOTTOM);
 
@@ -289,8 +290,6 @@ wxObject *wxAuiXmlHandler::DoCreateResource()
 
         return anb;
     }
-
-    return NULL;
 }
 
 bool wxAuiXmlHandler::CanHandle( wxXmlNode *node )
